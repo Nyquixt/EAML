@@ -31,7 +31,7 @@ def main(args: argparse.Namespace):
     imgDB = imageDB(rootdir, 60, 3)
     labelvec = np.load('/data/kien/rot_mnist28/mnist_train_label.npy') # label file
 
-    ds = datasets.MNIST('./', train=True, transform=transforms.Compose([
+    ds = datasets.MNIST('./data', train=True, transform=transforms.Compose([
                                 transforms.Resize((28,28)),
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.1307,), (0.3081,))
@@ -166,7 +166,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='EAML')
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-
     parser.add_argument('--epochs', default=1000, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-b', '--batch-size', default=64, type=int,

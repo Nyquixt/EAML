@@ -1,26 +1,17 @@
 import  torch
-from    torch import nn
-from    torch import optim
 from    torch.nn import functional as F
-from    torch.utils.data import TensorDataset, DataLoader
-from    torch import optim
-import  numpy as np
+from    torch.utils.data import DataLoader
 import  torchvision.datasets as datasets 
-import  torchvision.models as models 
 import  torchvision.transforms as transforms
 import  argparse
-import  os
 from    model import *
 from    utils import *
 from    lip_reg import *
 
-
 def main(args: argparse.Namespace):
     outer_lr = args.lr_out
     gpu_ind = args.gpuid
-    
     print_freq = args.print_freq
-    rootdir = args.root
     num_epoch = args.epochs
     batch_size = args.batch_size
     lip_balance = args.lip_balance
@@ -28,7 +19,7 @@ def main(args: argparse.Namespace):
     save_dir = args.save
 
     setGPU(gpu_ind)
-    ds = datasets.MNIST(rootdir, train=True, transform=transforms.Compose([
+    ds = datasets.MNIST('./data', train=True, transform=transforms.Compose([
                                 transforms.Resize((28,28)),
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.1307,), (0.3081,))
@@ -60,7 +51,7 @@ def main(args: argparse.Namespace):
 
     optimizer = torch.optim.SGD(feature_extractor.parameters(), lr=outer_lr, weight_decay=0.0005 ,momentum=0.9)
     optimizer1 = torch.optim.SGD(cls.parameters(), lr=outer_lr, weight_decay=0.0005 ,momentum=0.9)
-    criterion = torch.nn.CrossEntropyLoss()
+    # criterion = torch.nn.CrossEntropyLoss()
 
     epoch = 0
     step = 0
@@ -126,9 +117,6 @@ if __name__ == '__main__':
     )
 
     parser = argparse.ArgumentParser(description='EAML')
-    parser.add_argument('--root', metavar='DIR',
-                        help='root path of rotated dataset')
-
     parser.add_argument('--epochs', default=500, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-b', '--batch-size', default=64, type=int,
