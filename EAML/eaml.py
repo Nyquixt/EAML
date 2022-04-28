@@ -1,19 +1,13 @@
-import  torch
-from    torch import nn
-from    torch import optim
-from    torch.nn import functional as F
-from    torch.utils.data import TensorDataset, DataLoader
-from    torch import optim
-import  numpy as np
-import  torchvision.datasets as datasets 
-import  torchvision.models as models 
-import  torchvision.transforms as transforms
-import  argparse
-import  os
-from    model import *
-from    utils import *
-from    lip_reg import *
-
+import torch
+from torch.nn import functional as F
+from torch.utils.data import DataLoader
+import numpy as np
+import torchvision.datasets as datasets 
+import torchvision.transforms as transforms
+import argparse
+from model import *
+from utils import *
+from lip_reg import *
 
 def main(args: argparse.Namespace):
 
@@ -34,8 +28,8 @@ def main(args: argparse.Namespace):
 
     setGPU(gpu_ind)
 
-    imgDB = imageDB(rootdir,60,3)
-    labelvec = np.load('/home/liuhong/code/trans2020/code/Semi_synthetic/mnist_train_label.npy')
+    imgDB = imageDB(rootdir, 60, 3)
+    labelvec = np.load('/data/kien/rot_mnist28/mnist_train_label.npy') # label file
 
     ds = datasets.MNIST('./', train=True, transform=transforms.Compose([
                                 transforms.Resize((28,28)),
@@ -44,10 +38,8 @@ def main(args: argparse.Namespace):
                             ]), target_transform=None, download=True)
 
     train_loader = DataLoader(
-            ds, batch_size = batch_size * (domain_length + 1), shuffle = True,
-            num_workers = 2, pin_memory = True,)
-
-
+            ds, batch_size=batch_size * (domain_length + 1), shuffle=True,
+            num_workers=2, pin_memory=True,)  # for source domain
 
     config = [
             ('conv2d', [20, 1, 5, 5, 1, 0]),
@@ -61,26 +53,24 @@ def main(args: argparse.Namespace):
         ]
 
     config1 = [
-            ('linear', [500,800]),
+            ('linear', [500, 800]),
             ('relu', [True]),
-            ('linear', [10,500]),
+            ('linear', [10, 500]),
         ]
 
 
-    feature_extractor = Learner(config, 1,84).cuda()
-    cls = Learner(config1, 1,84).cuda()
+    feature_extractor = Learner(config, 1, 84).cuda() # meta-parameter
+    cls = Learner(config1, 1, 84).cuda() # task-specific parameter
 
     optimizer = torch.optim.SGD(feature_extractor.parameters(), lr=outer_lr, weight_decay=0.0005 ,momentum=0.9)
-    criterion = torch.nn.CrossEntropyLoss()
-    tt = get_mini_batches(imgDB, labelvec = labelvec, domain_num = 20, domain_length = domain_length, s_size = batch_size, q_size = batch_size, len_epoch = 500, channel = 1, imgsize = 28)
+    # criterion = torch.nn.CrossEntropyLoss()
+    tt = get_mini_batches(imgDB, labelvec=labelvec, domain_num=20, domain_length=domain_length, s_size=batch_size, q_size=batch_size, len_epoch=500, channel=1, imgsize=28)
 
-
-
-
-
+    # training
     epoch = 0
     step = 0
     lr_r = outer_lr
+    
     while epoch < num_epoch:
         if epoch > int(num_epoch / 2) & epoch <= int(num_epoch / 4 * 3):
             lr_r = 0.1 * outer_lr
@@ -90,41 +80,48 @@ def main(args: argparse.Namespace):
         for g in optimizer.param_groups:
             g['lr'] = lr_r
             
-        for (i, ((xspt, yspt, xqry, yqry),(im_s0,lb_s0)))in enumerate(zip(tt,train_loader)):
+        # outer loop, update meta-parameter
+        for (i, ((xspt, yspt, xqry, yqry), (im_s0, lb_s0)))in enumerate(zip(tt, train_loader)):
             if im_s0.shape[0] != batch_size * (domain_length + 1):
                 continue
             losslst = []
+
+            # init weights
             for xx in cls.children():
                 weight_init(xx)
             fast_weights1 = cls.parameters()
+
             im_s1 = im_s0[:domain_length * batch_size]
             lb_s1 = lb_s0[:domain_length * batch_size]
+
+            # go through each domain in the support set
             for domain_ind in range(domain_length):
+                # list of random indices
                 randind = np.random.permutation(domain_length * batch_size)[0:batch_size]
                 im_s = im_s1[randind].cuda()
                 lb_s = lb_s1[randind].cuda()
                 im_source1 = torch.from_numpy(xspt[domain_ind].astype('float32')).cuda()
                 
+                # inner loop
                 for i in range(inner_iter):
                     logits = cls(feature_extractor(im_s), fast_weights1, bn_training=True)
                     logitt = cls(feature_extractor(im_source1), fast_weights1, bn_training=True)
+                    # update task-specific parameter
                     ce1 = F.cross_entropy(logits, lb_s) + balance_in * DAN(logits,logitt)
                     grad1 = torch.autograd.grad(ce1, fast_weights1)
                     fast_weights1 = list(map(lambda p: p[1] - inner_lr * p[0], zip(grad1, fast_weights1)))
 
-                
-            im_s = im_s0[domain_length * batch_size:domain_length * batch_size + batch_size].cuda()
-            lb_s = lb_s0[domain_length * batch_size:domain_length * batch_size + batch_size].cuda()
+            im_s = im_s0[domain_length * batch_size:batch_size * (domain_length + 1)].cuda() # image source
+            lb_s = lb_s0[domain_length * batch_size:batch_size * (domain_length + 1)].cuda() # label source
             fss = feature_extractor(im_s)
-            logits = cls(fss, fast_weights1, bn_training=True)
+            logits = cls(fss, fast_weights1, bn_training=True) # logit source
 
             reg_loss = 0
             
             if lip_balance != 0:
                 margins = compute_margins(logits, lb_s)
                 norm_sq_dict = get_grad_hl_norms({'ft':fss}, torch.mean(margins), cls, create_graph=True, only_inputs=True)
-                
-                
+
                 for val in norm_sq_dict.values():
                     j = val[1]
                     j_ind = j > jth
@@ -133,33 +130,32 @@ def main(args: argparse.Namespace):
 
             for domain_ind in range(domain_length):
                 im_source1q = torch.from_numpy(xqry[domain_ind].astype('float32')).cuda()
-                label_source1q = torch.from_numpy(yqry[domain_ind].astype('int64')).cuda()
+                # label_source1q = torch.from_numpy(yqry[domain_ind].astype('int64')).cuda()
                 logitt = cls(feature_extractor(im_source1q), fast_weights1, bn_training=True)
-                loss1 = DAN(logits,logitt)
+                loss1 = DAN(logits, logitt) # d(P, Q)
                 losslst.append(loss1)
         
             dloss = sum(losslst) / domain_length
             ce = F.cross_entropy(logits, lb_s)
             
             if lip_balance == 0:
-                loss =  balance_out * dloss + ce
+                loss = balance_out * dloss + ce
             else:
-                loss =  balance_out * dloss + ce + lip_balance * reg_loss
+                loss = balance_out * dloss + ce + lip_balance * reg_loss
             
             step += 1
             if step % print_freq ==0:
                 if reg_loss == 0:
-                    print(epoch,ce.data.cpu().numpy(),dloss.data.cpu().numpy())
+                    print(epoch, ce.data.cpu().numpy(),dloss.data.cpu().numpy())
                 else:
-                    print(epoch,ce.data.cpu().numpy(),dloss.data.cpu().numpy(),reg_loss.data.cpu().numpy())
+                    print(epoch, ce.data.cpu().numpy(),dloss.data.cpu().numpy(),reg_loss.data.cpu().numpy())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        tt = get_mini_batches(imgDB, labelvec, domain_num = 20, domain_length = domain_length, s_size = batch_size, q_size = batch_size, len_epoch = 500, channel = 1, imgsize = 28)
+        tt = get_mini_batches(imgDB, labelvec, domain_num=20, domain_length=domain_length, s_size=batch_size, q_size=batch_size, len_epoch=500, channel=1, imgsize=28)
         epoch += 1
-
-
-    torch.save(feature_extractor.state_dict(),'save_dir')
+    # save model
+    torch.save(feature_extractor.state_dict(), save_dir)
 
 if __name__ == '__main__':
     dataset_names = sorted(

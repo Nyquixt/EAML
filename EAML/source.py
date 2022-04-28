@@ -16,8 +16,6 @@ from    lip_reg import *
 
 
 def main(args: argparse.Namespace):
-
-   
     outer_lr = args.lr_out
     gpu_ind = args.gpuid
     
@@ -31,9 +29,6 @@ def main(args: argparse.Namespace):
     train_label_path = args.train_label_path
 
     setGPU(gpu_ind)
-
-   
-
     ds = datasets.MNIST(rootdir, train=True, transform=transforms.Compose([
                                 transforms.Resize((28,28)),
                                 transforms.ToTensor(),
@@ -42,9 +37,7 @@ def main(args: argparse.Namespace):
 
     train_loader = DataLoader(
             ds, batch_size = batch_size, shuffle = True,
-            num_workers = 2, pin_memory = True,)
-
-
+            num_workers = 2, pin_memory = True)
 
     config = [
             ('conv2d', [20, 1, 5, 5, 1, 0]),
@@ -58,21 +51,17 @@ def main(args: argparse.Namespace):
         ]
 
     config1 = [
-            ('linear', [500,800]),
+            ('linear', [500, 800]),
             ('relu', [True]),
-            ('linear', [10,500]),
+            ('linear', [10, 500]),
         ]
 
-
-    feature_extractor = Learner(config, 1,84).cuda()
-    cls = Learner(config1, 1,84).cuda()
+    feature_extractor = Learner(config, 1, 84).cuda()
+    cls = Learner(config1, 1, 84).cuda()
 
     optimizer = torch.optim.SGD(feature_extractor.parameters(), lr=outer_lr, weight_decay=0.0005 ,momentum=0.9)
     optimizer1 = torch.optim.SGD(cls.parameters(), lr=outer_lr, weight_decay=0.0005 ,momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
-    
-
-
 
     epoch = 0
     step = 0
@@ -106,9 +95,7 @@ def main(args: argparse.Namespace):
                     if torch.sum(j_ind) > 0:
                         reg_loss += torch.mean(j[j_ind])
 
-            
-        
-            
+            # cross-entropy loss
             ce = F.cross_entropy(logits, lb_s)
             
             if lip_balance == 0:
@@ -130,7 +117,6 @@ def main(args: argparse.Namespace):
    
         epoch += 1
         torch.save(feature_extractor.state_dict(), save_dir)
-
 
     torch.save(feature_extractor.state_dict(), save_dir)
 

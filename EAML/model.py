@@ -1,13 +1,7 @@
 import  torch
 from    torch import nn
-from    torch import optim
 from    torch.nn import functional as F
-from    torch.utils.data import TensorDataset, DataLoader
-from    torch import optim
-import  numpy as np
-import  torchvision.datasets as datasets 
-import  torchvision.models as models 
-import  torchvision.transforms as transforms
+import  math
 
 class Learner(nn.Module):
     def __init__(self, config, imgc, imgsz):
@@ -52,21 +46,16 @@ class Learner(nn.Module):
             else:
                 raise NotImplementedError
 
-
-
-
-
-
     def extra_repr(self):
         info = ''
 
         for name, param in self.config:
             if name is 'conv2d':
-                tmp = 'conv2d:(ch_in:%d, ch_out:%d, k:%dx%d, stride:%d, padding:%d)'                      %(param[1], param[0], param[2], param[3], param[4], param[5],)
+                tmp = 'conv2d:(ch_in:%d, ch_out:%d, k:%dx%d, stride:%d, padding:%d)'%(param[1], param[0], param[2], param[3], param[4], param[5],)
                 info += tmp + '\n'
 
             elif name is 'convt2d':
-                tmp = 'convTranspose2d:(ch_in:%d, ch_out:%d, k:%dx%d, stride:%d, padding:%d)'                      %(param[0], param[1], param[2], param[3], param[4], param[5],)
+                tmp = 'convTranspose2d:(ch_in:%d, ch_out:%d, k:%dx%d, stride:%d, padding:%d)'%(param[0], param[1], param[2], param[3], param[4], param[5],)
                 info += tmp + '\n'
 
             elif name is 'linear':
@@ -76,7 +65,6 @@ class Learner(nn.Module):
             elif name is 'leakyrelu':
                 tmp = 'leakyrelu:(slope:%f)'%(param[0])
                 info += tmp + '\n'
-
 
             elif name is 'avg_pool2d':
                 tmp = 'avg_pool2d:(k:%d, stride:%d, padding:%d)'%(param[0], param[1], param[2])
@@ -91,8 +79,6 @@ class Learner(nn.Module):
                 raise NotImplementedError
 
         return info
-
-
 
     def forward(self, x, vars=None, bn_training=True):
         if vars is None:

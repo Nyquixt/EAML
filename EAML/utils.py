@@ -1,13 +1,5 @@
 import  torch
-from    torch import nn
-from    torch import optim
-from    torch.nn import functional as F
-from    torch.utils.data import TensorDataset, DataLoader
-from    torch import optim
 import  numpy as np
-import  torchvision.datasets as datasets 
-import  torchvision.models as models 
-import  torchvision.transforms as transforms
 import  os
 
 def setGPU(i):
@@ -21,8 +13,8 @@ def setGPU(i):
 
 def imageDB(root, domain_num, interv):
     imageDB = []
-    for i in range(0,domain_num,interv):
-        imageDB.append(np.load(root + 'mnist_train_img_' +str(i) + '.npy')) 
+    for i in range(0, domain_num, interv):
+        imageDB.append(np.load(root + 'mnist_train_img_' + str(i) + '.npy')) 
     return(imageDB)
 
 def shuffle(X, Y):
