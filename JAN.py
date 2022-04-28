@@ -31,12 +31,11 @@ def main(args: argparse.Namespace):
     lip_balance = args.lip_balance
     jth = args.lip_jth
     save_dir = args.save
-    train_label_path = args.train_label_path
 
     setGPU(gpu_ind)
 
     imgDB = imageDB(rootdir,60,3)
-    labelvec = np.load(train_label_path)
+    labelvec = np.load('/data/kien/rot_mnist_28/mnist_train_label.npy')
 
     ds = datasets.MNIST('./', train=True, transform=transforms.Compose([
                                 transforms.Resize((28,28)),
@@ -153,7 +152,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='EAML')
     parser.add_argument('--root', metavar='DIR',
                         help='root path of rotated dataset')
-
     parser.add_argument('--epochs', default=500, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-b', '--batch-size', default=64, type=int,
@@ -181,8 +179,6 @@ if __name__ == '__main__':
                         help='thresh of regularization')
     parser.add_argument('--save', default = 'JAN.pth', type=str,
                         help='save path')
-    parser.add_argument('--train-label-path', default = 'mnist_train_label.npy', type=str,
-                        help='train label path')
     
     args = parser.parse_args()
     print(args)

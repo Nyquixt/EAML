@@ -29,7 +29,7 @@ def main(args: argparse.Namespace):
     setGPU(gpu_ind)
 
     imgDB = imageDB(rootdir, 60, 3)
-    labelvec = np.load('/data/kien/rot_mnist28/mnist_train_label.npy') # label file
+    labelvec = np.load('/data/kien/rot_mnist_28/mnist_train_label.npy') # label file
 
     ds = datasets.MNIST('./data', train=True, transform=transforms.Compose([
                                 transforms.Resize((28,28)),
@@ -191,7 +191,7 @@ if __name__ == '__main__':
                         help='balance of regularization')
     parser.add_argument('--lip-jth', default = 0.01, type=float,
                         help='thresh of regularization')
-    parser.add_argument('--save', default = 'pretrained.pth', type=str,
+    parser.add_argument('--save', default = 'eaml.pth', type=str,
                         help='thresh of regularization')
     args = parser.parse_args()
     print(args)
