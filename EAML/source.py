@@ -26,7 +26,6 @@ def main(args: argparse.Namespace):
     lip_balance = args.lip_balance
     jth = args.lip_jth
     save_dir = args.save
-    train_label_path = args.train_label_path
 
     setGPU(gpu_ind)
     ds = datasets.MNIST(rootdir, train=True, transform=transforms.Compose([
@@ -150,8 +149,6 @@ if __name__ == '__main__':
     parser.add_argument('--lip-jth', default = 0.01, type=float,
                         help='thresh of regularization')
     parser.add_argument('--save', default = 'source.pth', type=str,
-                        help='save path')
-    parser.add_argument('--train-label-path', default = 'mnist_train_label.npy', type=str,
                         help='save path')
     
     args = parser.parse_args()

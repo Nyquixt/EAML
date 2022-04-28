@@ -1,12 +1,5 @@
-import math
 import torch
-import subprocess
-import itertools
-import numpy as np 
-import torch.nn as nn
 import time
-import torch.nn.functional as F
-import matplotlib.pyplot as plt 
 
 def norm_sq_in_list(raw_list):
 	return [torch.sum(tens**2) for tens in raw_list]
