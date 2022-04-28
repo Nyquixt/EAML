@@ -37,7 +37,7 @@ def main(args: argparse.Namespace):
     imgDB = imageDB(rootdir,60,3)
     labelvec = np.load('/data/kien/rot_mnist_28/mnist_train_label.npy')
 
-    ds = datasets.MNIST('./', train=True, transform=transforms.Compose([
+    ds = datasets.MNIST('./data', train=True, transform=transforms.Compose([
                                 transforms.Resize((28,28)),
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.1307,), (0.3081,))
@@ -139,7 +139,6 @@ def main(args: argparse.Namespace):
         tt = get_mini_batches(imgDB, labelvec, domain_num = 20, domain_length = domain_length, s_size = batch_size, q_size = batch_size, len_epoch = 500, channel = 1, imgsize = 28)
         epoch += 1
         torch.save(feature_extractor.state_dict(), save_dir)
-
 
     torch.save(feature_extractor.state_dict(), save_dir)
 
